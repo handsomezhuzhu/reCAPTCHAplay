@@ -31,9 +31,9 @@ async function initializeGame() {
         gScript.defer = true;
         document.head.appendChild(gScript);
 
-        // Dynamically inject hCaptcha script
+        // Dynamically inject hCaptcha script with EXPLICIT render
         const hScript = document.createElement('script');
-        hScript.src = "https://js.hcaptcha.com/1/api.js";
+        hScript.src = "https://js.hcaptcha.com/1/api.js?render=explicit";
         hScript.async = true;
         hScript.defer = true;
         document.head.appendChild(hScript);
@@ -47,13 +47,7 @@ async function initializeGame() {
             </div>
         `;
 
-        hcaptchaWrapper.innerHTML = `
-            <div class="h-captcha" 
-                data-sitekey="${config.hcaptchaSiteKey}" 
-                data-theme="dark"
-                data-callback="onHcaptchaSolved">
-            </div>
-        `;
+        hcaptchaWrapper.innerHTML = "";
 
         // Wait a tiny bit for scripts to parse
         setTimeout(() => {
@@ -105,6 +99,23 @@ window.onRecaptchaSolved = function (token) {
         overlayText.textContent = "SECONDARY FIREWALL (hCaptcha) ENGAGED. Awaiting pattern verification.";
 
         hcaptchaWrapper.classList.remove('hidden');
+
+        // Explicitly render hCaptcha only now
+        hcaptchaWrapper.innerHTML = "";
+        const mountNode = document.createElement('div');
+        hcaptchaWrapper.appendChild(mountNode);
+
+        if (typeof hcaptcha !== 'undefined') {
+            try {
+                hcaptcha.render(mountNode, {
+                    sitekey: config.hcaptchaSiteKey,
+                    theme: 'dark',
+                    callback: 'onHcaptchaSolved'
+                });
+            } catch (e) {
+                console.error("Failed to explicit render hCaptcha", e);
+            }
+        }
     }, 500);
 };
 
