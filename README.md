@@ -35,19 +35,21 @@ cp .env.example .env
 ```
 修改 `.env` 文件内容：
 ```env
-# 你的 Google reCAPTCHA v2 Checkbox ("I am not a robot") Site Key 和 Secret Key
-# 申请地址: https://www.google.com/recaptcha/admin/
-# 注意：之前隐形版 v3 的密钥不能用于渲染游戏挑战框！
-RECAPTCHA_SITE_KEY=your_site_key_here
-RECAPTCHA_SECRET_KEY=your_secret_key_here
+# Google reCAPTCHA v2 Checkbox ("I am not a robot")
+RECAPTCHA_SITE_KEY=your_google_site_key_here
+RECAPTCHA_SECRET_KEY=your_google_secret_key_here
+
+# hCaptcha 
+HCAPTCHA_SITE_KEY=your_hcaptcha_site_key_here
+HCAPTCHA_SECRET_KEY=your_hcaptcha_secret_key_here
 
 # 单个用户最大尝试次数 (防御刷分/暴力验证)
-MAX_PLAY_ATTEMPTS=3
+MAX_PLAY_ATTEMPTS=100
 
 # 本地服务运行端口
 PORT=3000
 ```
-*注：同时需要将 `public/index.html` 和 `public/game.js` 中的 `your_site_key_here` 替换为你实际的 Site Key。本地测试时如果没有填写密钥，系统默认使用 Mock (模拟) 验证通过。*
+>*注：本地测试时如果没有填写密钥，系统默认使用 Mock (模拟) 验证通过。前端向后端请求对应的 public key 并进行动态渲染。*
 
 ### 4. 启动服务
 ```bash
@@ -99,10 +101,12 @@ docker run -d -p 3000:3000 \
 1. **指纹生成**: 在 `public/fingerprint.js` 中，前端会通过 Canvas 渲染特定图形的细微差异、屏幕分辨率、UserAgent 等信息生成一个较轻量且注重隐私的哈希值。
 2. **频控策略**: 玩家通关Boss触发请求时，会携带该`fingerprint`。后端采用 `IP地址 + 指纹` 作为联合主键进行计次。一旦超过 `MAX_PLAY_ATTEMPTS`，则直接拒绝服务并返回 HTTP 429。
 
-## 🎮 游玩说明
-1. 界面将被渲染为一个炫酷的科幻控制台。
-2. 控制台中央会呈现出经过 CSS 样式融合的 **Google reCAPTCHA v2** 验证终端。
-3. 玩家点击勾选框，进行传统的“选红绿灯”、“选斑马线”等图像解密操作。
-4. 验证成功通过后，前端 JS `data-callback` 立即拦截回调，并上报后端核实。
-5. 系统播放 `ACCESS GRANTED` 成功特效，同时你的 **"已破解模块数 (MODULES DECODED)"** + 1。
-6. 如果你一直成功解答到了 `MAX_PLAY_ATTEMPTS` 次，系统会进行强制风控（SYSTEM LOCKDOWN）以展示防刷分功能。
+## 🎮 游玩说明 (The Double Firewall)
+1. 界面被渲染为一个炫酷的科幻控制台。
+2. **第一重防火墙 (Google reCAPTCHA v2)**：控制台中央首先呈现出一个 reCAPTCHA 验证终端。你需要点击并解开红绿灯、斑马线等图片拼图。
+3. **第二重防火墙 (hCaptcha)**：当 Google 框通过后，系统会提示“主防火墙已突破”，随后浮现出业界著名的高难度 **hCaptcha** 验证码。
+4. 玩家必须再通过极其折磨脑力的 hCaptcha 拼图测试。
+5. 当两把“锁”全部凑齐后，前端会将两个凭证 (Token) 一手交由后端进行最高级别的**双引擎校验**。
+6. 双重验证成功后，系统播放 `DUAL ACCESS GRANTED` 成功特效，同时你的 **"已破解模块数 (MODULES DECODED)"** + 1。
+7. 系统重置两个 Widget 的状态，生成新的最高防备火力关卡。
+8. 如果你一直成功通过到了 `MAX_PLAY_ATTEMPTS` 次，系统会进行强制风控（SYSTEM LOCKDOWN）拦截请求。

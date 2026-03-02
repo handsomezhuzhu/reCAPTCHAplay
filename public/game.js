@@ -4,47 +4,136 @@ const overlayText = document.getElementById('overlay-text');
 const flashOverlay = document.getElementById('flash-overlay');
 const flashText = document.getElementById('flash-text');
 const restartBtn = document.getElementById('restart-btn');
-const recaptchaWrapper = document.querySelector('.recaptcha-wrapper');
+
+const recaptchaWrapper = document.getElementById('recaptcha-wrapper');
+const hcaptchaWrapper = document.getElementById('hcaptcha-wrapper');
+const loadingIndicator = document.getElementById('loading-indicator');
 
 let score = 0;
 let isVerifying = false;
 
-// Google reCAPTCHA v2 callback attached via data-callback
-window.onCaptchaSolved = async function (token) {
+// The tokens we collect in sequence
+let currentRecaptchaToken = null;
+let currentHcaptchaToken = null;
+
+let config = null;
+
+// --- 1. Initialization ---
+async function initializeGame() {
+    try {
+        const response = await fetch('/api/config');
+        config = await response.json();
+
+        // Dynamically inject Google script
+        const gScript = document.createElement('script');
+        gScript.src = "https://www.google.com/recaptcha/api.js";
+        gScript.async = true;
+        gScript.defer = true;
+        document.head.appendChild(gScript);
+
+        // Dynamically inject hCaptcha script
+        const hScript = document.createElement('script');
+        hScript.src = "https://js.hcaptcha.com/1/api.js";
+        hScript.async = true;
+        hScript.defer = true;
+        document.head.appendChild(hScript);
+
+        // Build containers
+        recaptchaWrapper.innerHTML = `
+            <div class="g-recaptcha" 
+                data-sitekey="${config.recaptchaSiteKey}" 
+                data-theme="dark"
+                data-callback="onRecaptchaSolved">
+            </div>
+        `;
+
+        hcaptchaWrapper.innerHTML = `
+            <div class="h-captcha" 
+                data-sitekey="${config.hcaptchaSiteKey}" 
+                data-theme="dark"
+                data-callback="onHcaptchaSolved">
+            </div>
+        `;
+
+        // Wait a tiny bit for scripts to parse
+        setTimeout(() => {
+            loadingIndicator.classList.add('hidden');
+            startLevelSequence();
+        }, 1500);
+
+    } catch (err) {
+        console.error("Failed to load configuration", err);
+        loadingIndicator.textContent = "CRITICAL ERROR: CONFIGURATION UNREACHABLE";
+    }
+}
+
+// --- 2. Sequence Management ---
+function startLevelSequence() {
+    currentRecaptchaToken = null;
+    currentHcaptchaToken = null;
+    isVerifying = false;
+
+    overlayTitle.textContent = "SECURITY PROTOCOL TRIGGERED";
+    overlayTitle.className = "error-theme";
+    overlayText.textContent = "PRIMARY FIREWALL: Verify neural patterns to proceed.";
+
+    recaptchaWrapper.classList.remove('hidden');
+    recaptchaWrapper.style.opacity = "1";
+    hcaptchaWrapper.classList.add('hidden');
+    hcaptchaWrapper.style.opacity = "1";
+
+    // Reset widgets visually if APIs are loaded
+    if (typeof grecaptcha !== 'undefined' && grecaptcha.reset) {
+        grecaptcha.reset();
+    }
+    if (typeof hcaptcha !== 'undefined' && hcaptcha.reset) {
+        hcaptcha.reset();
+    }
+}
+
+// --- 3. Callbacks ---
+window.onRecaptchaSolved = function (token) {
+    currentRecaptchaToken = token;
+
+    // Transition UI to the Secondary Firewall
+    recaptchaWrapper.style.opacity = "0";
+    setTimeout(() => {
+        recaptchaWrapper.classList.add('hidden');
+
+        overlayTitle.textContent = "PRIMARY WALL BREACHED";
+        overlayTitle.className = "error-theme";
+        overlayText.textContent = "SECONDARY FIREWALL (hCaptcha) ENGAGED. Awaiting pattern verification.";
+
+        hcaptchaWrapper.classList.remove('hidden');
+    }, 500);
+};
+
+window.onHcaptchaSolved = async function (token) {
     if (isVerifying) return;
     isVerifying = true;
+    currentHcaptchaToken = token;
 
     overlayTitle.textContent = "DECRYPTING...";
     overlayTitle.className = "success-theme";
-    overlayText.textContent = "Analyzing solution against central firewall...";
-    recaptchaWrapper.style.opacity = "0.5";
+    overlayText.textContent = "Analyzing both solutions against central firewall...";
+    hcaptchaWrapper.style.opacity = "0.5";
 
-    // Call our backend to verify the token
-    await verifyWithBackend(token);
+    await verifyWithBackend();
 };
 
-window.onCaptchaExpired = function () {
-    overlayTitle.textContent = "SESSION EXPIRED";
-    overlayTitle.className = "error-theme";
-    overlayText.textContent = "Warning, cryptographic token timed out.";
-    isVerifying = false;
-};
-
-window.onCaptchaError = function () {
-    overlayTitle.textContent = "CRITICAL FAILURE";
-    overlayTitle.className = "error-theme";
-    overlayText.textContent = "Widget connection lost. Verify network access.";
-    isVerifying = false;
-};
-
-async function verifyWithBackend(token) {
+// --- 4. Backend Verification ---
+async function verifyWithBackend() {
     try {
         const fingerprint = await Utils.getFingerprint();
 
         const response = await fetch('/api/verify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token, fingerprint }) // Keep the same API shape
+            body: JSON.stringify({
+                recaptchaToken: currentRecaptchaToken,
+                hcaptchaToken: currentHcaptchaToken,
+                fingerprint
+            })
         });
 
         const data = await response.json();
@@ -60,27 +149,16 @@ async function verifyWithBackend(token) {
 }
 
 function handleSuccess() {
-    // Show flash
     flashOverlay.classList.remove('hidden');
     flashOverlay.classList.remove('error');
-    flashText.textContent = "ACCESS GRANTED";
+    flashText.textContent = "DUAL ACCESS GRANTED";
 
     score++;
 
-    // Reset the widget for the next level
     setTimeout(() => {
-        if (typeof grecaptcha !== 'undefined') {
-            grecaptcha.reset();
-        }
-
         scoreEl.textContent = score;
-
         flashOverlay.classList.add('hidden');
-        overlayTitle.textContent = "SECURITY PROTOCOL TRIGGERED";
-        overlayTitle.className = "error-theme"; // red
-        overlayText.textContent = `Bypass Level ${score + 1} Firewall. Verify neural patterns.`;
-        recaptchaWrapper.style.opacity = "1";
-        isVerifying = false;
+        startLevelSequence();
     }, 2000);
 }
 
@@ -98,7 +176,8 @@ function handleFailure(message, statusCode) {
     overlayTitle.className = "error-theme";
     overlayText.textContent = message;
 
-    recaptchaWrapper.classList.add('hidden'); // Hide the widget on fail
+    recaptchaWrapper.classList.add('hidden');
+    hcaptchaWrapper.classList.add('hidden');
     restartBtn.classList.remove('hidden');
 
     setTimeout(() => {
@@ -107,19 +186,11 @@ function handleFailure(message, statusCode) {
 }
 
 restartBtn.addEventListener('click', () => {
-    // Restart logic
     score = 0;
     scoreEl.textContent = score;
-    overlayTitle.textContent = "SECURITY PROTOCOL TRIGGERED";
-    overlayTitle.className = "error-theme";
-    overlayText.textContent = "Verify neural patterns to bypass the firewall.";
-    isVerifying = false;
-
-    recaptchaWrapper.classList.remove('hidden');
-    recaptchaWrapper.style.opacity = "1";
     restartBtn.classList.add('hidden');
-
-    if (typeof grecaptcha !== 'undefined') {
-        grecaptcha.reset();
-    }
+    startLevelSequence();
 });
+
+// Boot UP
+initializeGame();

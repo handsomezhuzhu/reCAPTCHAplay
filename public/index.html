@@ -5,8 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Defeat The Bot Boss</title>
-    <!-- reCAPTCHA v2 script block -->
-    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    <!-- Scripts injected dynamically by game.js -->
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
 </head>
@@ -18,7 +17,7 @@
     <div id="terminal-container">
         <!-- Persistent UI Overlay -->
         <div id="ui-layer">
-            <div class="system-header">OVERRIDE SYSTEM v2.0.4</div>
+            <div class="system-header">OVERRIDE SYSTEM v3.0 (DUAL-CORE FIREWALL)</div>
             <div id="score-board">MODULES DECODED: <span id="score">0</span></div>
             <div id="status-message">AWAITING HUMAN AUTHORIZATION SIGNAL...</div>
         </div>
@@ -26,16 +25,18 @@
         <!-- The Hacking Challenge Widget (v2) -->
         <div id="challenge-bay">
             <h1 id="overlay-title">SECURITY PROTOCOL TRIGGERED</h1>
-            <p id="overlay-text">Verify neural patterns to bypass the firewall.</p>
+            <p id="overlay-text">PRIMARY FIREWALL: Verify neural patterns to proceed.</p>
 
-            <div class="recaptcha-wrapper">
-                <div class="g-recaptcha" data-sitekey="6LccSX0sAAAAANdMQtfYtc59z2eO17Hi_Iq-Si1E" data-theme="dark"
-                    data-callback="onCaptchaSolved" data-expired-callback="onCaptchaExpired"
-                    data-error-callback="onCaptchaError">
-                </div>
+            <div class="recaptcha-wrapper hidden" id="recaptcha-wrapper">
+                <!-- Google reCAPTCHA injected dynamically -->
+            </div>
+
+            <div class="recaptcha-wrapper hidden" id="hcaptcha-wrapper">
+                <!-- hCaptcha injected dynamically -->
             </div>
 
             <button id="restart-btn" class="hidden">INITIATE NEW SEQUENCE</button>
+            <div id="loading-indicator">ESTABLISHING SECURE CONNECTION...</div>
         </div>
 
     </div>
