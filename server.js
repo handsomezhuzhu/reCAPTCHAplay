@@ -57,7 +57,11 @@ app.post('/api/verify', async (req, res) => {
             const reRes = await axios.post(
                 `https://www.google.com/recaptcha/api/siteverify?secret=${RECAPTCHA_SECRET_KEY}&response=${recaptchaToken}`
             );
-            if (reRes.data.success) recaptchaValid = true;
+            if (reRes.data.success) {
+                recaptchaValid = true;
+            } else {
+                console.error("Google reCAPTCHA verification failed. Full response:", reRes.data);
+            }
         }
 
         // --- 2b. Verify hCaptcha ---
