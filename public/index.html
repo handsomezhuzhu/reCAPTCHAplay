@@ -1,30 +1,52 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Defeat The Bot Boss</title>
-    <!-- reCAPTCHA v3 script. Replace with actual key for prod. -->
-    <script src="https://www.google.com/recaptcha/api.js?render=your_site_key_here"></script>
+    <!-- reCAPTCHA v2 script block -->
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
 </head>
-<body>
-    <div id="ui-layer">
-        <div id="score-board">ENERGY: <span id="score">0</span> / 100</div>
-        <div id="status-message">Click the energy orbs to charge your weapon.</div>
-    </div>
-    
-    <canvas id="gameCanvas"></canvas>
 
-    <div id="overlay" class="hidden">
-        <h1 id="overlay-title">BOSS APPROACHING</h1>
-        <p id="overlay-text">Prepare your final strike.</p>
-        <button id="final-strike-btn" class="hidden">EXECUTE FINAL STRIKE</button>
-        <button id="restart-btn" class="hidden">PLAY AGAIN</button>
+<body>
+    <div id="scan-line"></div>
+    <div id="noise"></div>
+
+    <div id="terminal-container">
+        <!-- Persistent UI Overlay -->
+        <div id="ui-layer">
+            <div class="system-header">OVERRIDE SYSTEM v2.0.4</div>
+            <div id="score-board">MODULES DECODED: <span id="score">0</span></div>
+            <div id="status-message">AWAITING HUMAN AUTHORIZATION SIGNAL...</div>
+        </div>
+
+        <!-- The Hacking Challenge Widget (v2) -->
+        <div id="challenge-bay">
+            <h1 id="overlay-title">SECURITY PROTOCOL TRIGGERED</h1>
+            <p id="overlay-text">Verify neural patterns to bypass the firewall.</p>
+
+            <div class="recaptcha-wrapper">
+                <div class="g-recaptcha" data-sitekey="your_site_key_here" data-theme="dark"
+                    data-callback="onCaptchaSolved" data-expired-callback="onCaptchaExpired"
+                    data-error-callback="onCaptchaError">
+                </div>
+            </div>
+
+            <button id="restart-btn" class="hidden">INITIATE NEW SEQUENCE</button>
+        </div>
+
+    </div>
+
+    <!-- Notification Overlay -->
+    <div id="flash-overlay" class="hidden">
+        <h2 id="flash-text">ACCESS GRANTED</h2>
     </div>
 
     <script src="fingerprint.js"></script>
     <script src="game.js"></script>
 </body>
+
 </html>

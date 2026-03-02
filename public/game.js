@@ -1,245 +1,125 @@
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
 const scoreEl = document.getElementById('score');
-const statusEl = document.getElementById('status-message');
-const overlay = document.getElementById('overlay');
 const overlayTitle = document.getElementById('overlay-title');
 const overlayText = document.getElementById('overlay-text');
-const finalStrikeBtn = document.getElementById('final-strike-btn');
+const flashOverlay = document.getElementById('flash-overlay');
+const flashText = document.getElementById('flash-text');
 const restartBtn = document.getElementById('restart-btn');
-
-// Replace this with the actual site key if you test locally
-const RECAPTCHA_SITE_KEY = 'your_site_key_here';
-
-function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-}
-window.addEventListener('resize', resize);
-resize();
+const recaptchaWrapper = document.querySelector('.recaptcha-wrapper');
 
 let score = 0;
-const targetScore = 100;
-let gameActive = true;
-let orbs = [];
-let particles = [];
+let isVerifying = false;
 
-class Orb {
-    constructor() {
-        this.radius = 30 + Math.random() * 20;
-        this.x = this.radius + Math.random() * (canvas.width - this.radius * 2);
-        this.y = this.radius + Math.random() * (canvas.height - this.radius * 2);
-        this.color = `hsl(${180 + Math.random() * 60}, 100%, 50%)`;
-        this.life = 1.0;
-        this.decay = 0.005 + Math.random() * 0.01;
-    }
+// Google reCAPTCHA v2 callback attached via data-callback
+window.onCaptchaSolved = async function (token) {
+    if (isVerifying) return;
+    isVerifying = true;
 
-    draw() {
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fillStyle = this.color;
-        ctx.globalAlpha = this.life;
-        ctx.fill();
+    overlayTitle.textContent = "DECRYPTING...";
+    overlayTitle.className = "success-theme";
+    overlayText.textContent = "Analyzing solution against central firewall...";
+    recaptchaWrapper.style.opacity = "0.5";
 
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = '#fff';
-        ctx.stroke();
+    // Call our backend to verify the token
+    await verifyWithBackend(token);
+};
 
-        ctx.globalAlpha = 1.0; // Reset
-    }
+window.onCaptchaExpired = function () {
+    overlayTitle.textContent = "SESSION EXPIRED";
+    overlayTitle.className = "error-theme";
+    overlayText.textContent = "Warning, cryptographic token timed out.";
+    isVerifying = false;
+};
 
-    update() {
-        this.life -= this.decay;
-        this.radius -= this.decay * 30; // shrink over time
-    }
-}
-
-class Particle {
-    constructor(x, y, color) {
-        this.x = x;
-        this.y = y;
-        this.vx = (Math.random() - 0.5) * 10;
-        this.vy = (Math.random() - 0.5) * 10;
-        this.life = 1.0;
-        this.color = color;
-    }
-
-    update() {
-        this.x += this.vx;
-        this.y += this.vy;
-        this.life -= 0.05;
-    }
-
-    draw() {
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
-        ctx.fillStyle = this.color;
-        ctx.globalAlpha = this.life;
-        ctx.fill();
-        ctx.globalAlpha = 1.0;
-    }
-}
-
-function spawnOrb() {
-    if (gameActive && orbs.length < 5) {
-        orbs.push(new Orb());
-    }
-    setTimeout(spawnOrb, 500 + Math.random() * 1000);
-}
-
-function explode(x, y, color) {
-    for (let i = 0; i < 20; i++) {
-        particles.push(new Particle(x, y, color));
-    }
-}
-
-canvas.addEventListener('mousedown', (e) => {
-    if (!gameActive) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-
-    for (let i = orbs.length - 1; i >= 0; i--) {
-        const orb = orbs[i];
-        const dist = Math.hypot(mouseX - orb.x, mouseY - orb.y);
-
-        if (dist < orb.radius) {
-            // Hit!
-            explode(orb.x, orb.y, orb.color);
-            orbs.splice(i, 1);
-            score += 10;
-            scoreEl.textContent = score;
-
-            if (score >= targetScore) {
-                triggerBossFight();
-            }
-            break;
-        }
-    }
-});
-
-function draw() {
-    ctx.fillStyle = 'rgba(5, 5, 16, 0.3)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    for (let i = orbs.length - 1; i >= 0; i--) {
-        orbs[i].update();
-        if (orbs[i].life <= 0 || orbs[i].radius <= 0) {
-            orbs.splice(i, 1);
-        } else {
-            orbs[i].draw();
-        }
-    }
-
-    for (let i = particles.length - 1; i >= 0; i--) {
-        particles[i].update();
-        if (particles[i].life <= 0) {
-            particles.splice(i, 1);
-        } else {
-            particles[i].draw();
-        }
-    }
-
-    requestAnimationFrame(draw);
-}
-
-function triggerBossFight() {
-    gameActive = false;
-    orbs = [];
-    particles = [];
-    statusEl.textContent = "Energy fully charged. Boss incoming...";
-
-    setTimeout(() => {
-        overlay.classList.remove('hidden');
-        finalStrikeBtn.classList.remove('hidden');
-    }, 1000);
-}
-
-// ---------------------------------------------------------
-// reCAPTCHA and Backend Integration
-// ---------------------------------------------------------
-
-finalStrikeBtn.addEventListener('click', async () => {
-    finalStrikeBtn.textContent = 'EXECUTING...';
-    finalStrikeBtn.disabled = true;
-
-    try {
-        if (typeof grecaptcha !== 'undefined' && grecaptcha.ready) {
-            grecaptcha.ready(function () {
-                grecaptcha.execute(RECAPTCHA_SITE_KEY, { action: 'boss_fight' }).then(async function (token) {
-                    await verifyWithBackend(token);
-                }).catch(async (err) => {
-                    console.warn("reCAPTCHA execute failed. Likely mock environment without API key.");
-                    await verifyWithBackend("mock_token");
-                });
-            });
-        } else {
-            console.warn("grecaptcha not found. Mock local testing mode.");
-            await verifyWithBackend("mock_token");
-        }
-    } catch (e) {
-        console.error("reCAPTCHA error:", e);
-        await verifyWithBackend("mock_token");
-    }
-});
+window.onCaptchaError = function () {
+    overlayTitle.textContent = "CRITICAL FAILURE";
+    overlayTitle.className = "error-theme";
+    overlayText.textContent = "Widget connection lost. Verify network access.";
+    isVerifying = false;
+};
 
 async function verifyWithBackend(token) {
-    overlayText.textContent = "Verifying neural patterns with central server...";
-
     try {
         const fingerprint = await Utils.getFingerprint();
 
         const response = await fetch('/api/verify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token, fingerprint })
+            body: JSON.stringify({ token, fingerprint }) // Keep the same API shape
         });
 
         const data = await response.json();
 
         if (response.ok && data.success) {
-            // Victory
-            overlayTitle.textContent = "BOSS DEFEATED";
-            overlayTitle.className = "success-theme";
-            overlayText.textContent = `Humanity confirmed. (Score: ${data.score || 'Mock'}) - Plays today: ${data.attempts}`;
-            finalStrikeBtn.classList.add('hidden');
-
-            restartBtn.classList.remove('hidden');
-            restartBtn.className = "success-border";
+            handleSuccess();
         } else {
-            // Defeat / Rate Limit / Bot Detected
-            overlayTitle.textContent = "SYSTEM LOCKDOWN";
-            overlayText.textContent = data.message || "You failed the verification.";
-            finalStrikeBtn.classList.add('hidden');
-
-            if (response.status !== 429) {
-                restartBtn.classList.remove('hidden');
-            }
+            handleFailure(data.message || "Invalid authorization token.", response.status);
         }
     } catch (error) {
-        overlayTitle.textContent = "COMMUNICATION ERROR";
-        overlayText.textContent = "Could not reach the central server. The backend might not be configured correctly.";
-        finalStrikeBtn.classList.add('hidden');
-        restartBtn.classList.remove('hidden');
+        handleFailure("Backend communication offline.", 500);
     }
 }
 
+function handleSuccess() {
+    // Show flash
+    flashOverlay.classList.remove('hidden');
+    flashOverlay.classList.remove('error');
+    flashText.textContent = "ACCESS GRANTED";
+
+    score++;
+
+    // Reset the widget for the next level
+    setTimeout(() => {
+        if (typeof grecaptcha !== 'undefined') {
+            grecaptcha.reset();
+        }
+
+        scoreEl.textContent = score;
+
+        flashOverlay.classList.add('hidden');
+        overlayTitle.textContent = "SECURITY PROTOCOL TRIGGERED";
+        overlayTitle.className = "error-theme"; // red
+        overlayText.textContent = `Bypass Level ${score + 1} Firewall. Verify neural patterns.`;
+        recaptchaWrapper.style.opacity = "1";
+        isVerifying = false;
+    }, 2000);
+}
+
+function handleFailure(message, statusCode) {
+    flashOverlay.classList.remove('hidden');
+    flashOverlay.classList.add('error');
+
+    if (statusCode === 429) {
+        flashText.textContent = "LOCKDOWN";
+    } else {
+        flashText.textContent = "ACCESS DENIED";
+    }
+
+    overlayTitle.textContent = "SYSTEM LOCKDOWN";
+    overlayTitle.className = "error-theme";
+    overlayText.textContent = message;
+
+    recaptchaWrapper.classList.add('hidden'); // Hide the widget on fail
+    restartBtn.classList.remove('hidden');
+
+    setTimeout(() => {
+        flashOverlay.classList.add('hidden');
+    }, 2000);
+}
+
 restartBtn.addEventListener('click', () => {
-    // Reset Game
+    // Restart logic
     score = 0;
     scoreEl.textContent = score;
-    gameActive = true;
-    overlay.classList.add('hidden');
-    restartBtn.classList.add('hidden');
-    overlayTitle.textContent = "BOSS APPROACHING";
-    overlayTitle.className = "";
-    overlayText.textContent = "Prepare your final strike.";
-    finalStrikeBtn.textContent = "EXECUTE FINAL STRIKE";
-    finalStrikeBtn.disabled = false;
-    statusEl.textContent = "Click the energy orbs to charge your weapon.";
-});
+    overlayTitle.textContent = "SECURITY PROTOCOL TRIGGERED";
+    overlayTitle.className = "error-theme";
+    overlayText.textContent = "Verify neural patterns to bypass the firewall.";
+    isVerifying = false;
 
-// Start game
-spawnOrb();
-draw();
+    recaptchaWrapper.classList.remove('hidden');
+    recaptchaWrapper.style.opacity = "1";
+    restartBtn.classList.add('hidden');
+
+    if (typeof grecaptcha !== 'undefined') {
+        grecaptcha.reset();
+    }
+});

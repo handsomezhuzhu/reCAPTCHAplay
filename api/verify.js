@@ -53,18 +53,18 @@ module.exports = async (req, res) => {
 
         const data = response.data;
 
-        if (data.success && data.score >= 0.5) {
+        if (data.success) {
             playCounts[identifier]++;
             return res.json({
                 success: true,
-                message: "Verification successful! You defeated the Boss!",
-                score: data.score,
+                message: "Verification successful! You bypassed the firewall!",
+                score: "V2_CHECKBOX_OK",
                 attempts: playCounts[identifier]
             });
         } else {
             return res.status(403).json({
                 success: false,
-                message: "Bot behavior detected by reCAPTCHA.",
+                message: "Bot behavior detected by reCAPTCHA firewall.",
                 errors: data['error-codes']
             });
         }

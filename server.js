@@ -25,11 +25,11 @@ app.post('/api/verify', async (req, res) => {
     if (!playCounts[identifier]) {
         playCounts[identifier] = 0;
     }
-    
+
     if (playCounts[identifier] >= MAX_PLAY_ATTEMPTS) {
-        return res.status(429).json({ 
-            success: false, 
-            message: `You have reached the maximum play limit of ${MAX_PLAY_ATTEMPTS} attempts. Please try again later.` 
+        return res.status(429).json({
+            success: false,
+            message: `You have reached the maximum play limit of ${MAX_PLAY_ATTEMPTS} attempts. Please try again later.`
         });
     }
 
@@ -52,21 +52,21 @@ app.post('/api/verify', async (req, res) => {
 
         const data = response.data;
 
-        if (data.success && data.score >= 0.5) {
+        if (data.success) {
             // Success - update play count
             playCounts[identifier]++;
-            return res.json({ 
-                success: true, 
-                message: "Verification successful! You defeated the Boss!", 
-                score: data.score,
+            return res.json({
+                success: true,
+                message: "Verification successful! You bypassed the firewall!",
+                score: "V2_CHECKBOX_OK",
                 attempts: playCounts[identifier]
             });
         } else {
             // Failed bot check
-            return res.status(403).json({ 
-                success: false, 
-                message: "Bot behavior detected by reCAPTCHA.", 
-                errors: data['error-codes'] 
+            return res.status(403).json({
+                success: false,
+                message: "Bot behavior detected by reCAPTCHA firewall.",
+                errors: data['error-codes']
             });
         }
     } catch (error) {

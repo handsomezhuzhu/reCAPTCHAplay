@@ -35,8 +35,9 @@ cp .env.example .env
 ```
 修改 `.env` 文件内容：
 ```env
-# 你的 Google reCAPTCHA v3 Site Key 和 Secret Key
+# 你的 Google reCAPTCHA v2 Checkbox ("I am not a robot") Site Key 和 Secret Key
 # 申请地址: https://www.google.com/recaptcha/admin/
+# 注意：之前隐形版 v3 的密钥不能用于渲染游戏挑战框！
 RECAPTCHA_SITE_KEY=your_site_key_here
 RECAPTCHA_SECRET_KEY=your_secret_key_here
 
@@ -99,8 +100,9 @@ docker run -d -p 3000:3000 \
 2. **频控策略**: 玩家通关Boss触发请求时，会携带该`fingerprint`。后端采用 `IP地址 + 指纹` 作为联合主键进行计次。一旦超过 `MAX_PLAY_ATTEMPTS`，则直接拒绝服务并返回 HTTP 429。
 
 ## 🎮 游玩说明
-1. 游戏开始后，屏幕会不断生成“能量球”(Orb)。
-2. 玩家点击能量球可以收集能量，增加分数。
-3. 当分数达到 `100` 时触发 Boss 战阶段，画面变为红色警告。
-4. 点击 **"EXECUTE FINAL STRIKE"** 按钮对 Boss 进行终结一击。
-5. 此时底层无缝执行 `grecaptcha.execute()`。如果 Google 判定为人类，系统发放胜利勋章；如果判定为爬虫机器人，则予以阻截 (SYSTEM LOCKDOWN)。
+1. 界面将被渲染为一个炫酷的科幻控制台。
+2. 控制台中央会呈现出经过 CSS 样式融合的 **Google reCAPTCHA v2** 验证终端。
+3. 玩家点击勾选框，进行传统的“选红绿灯”、“选斑马线”等图像解密操作。
+4. 验证成功通过后，前端 JS `data-callback` 立即拦截回调，并上报后端核实。
+5. 系统播放 `ACCESS GRANTED` 成功特效，同时你的 **"已破解模块数 (MODULES DECODED)"** + 1。
+6. 如果你一直成功解答到了 `MAX_PLAY_ATTEMPTS` 次，系统会进行强制风控（SYSTEM LOCKDOWN）以展示防刷分功能。
