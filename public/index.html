@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Defeat The Bot Boss</title>
+    <!-- reCAPTCHA v3 script. Replace with actual key for prod. -->
+    <script src="https://www.google.com/recaptcha/api.js?render=your_site_key_here"></script>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="ui-layer">
+        <div id="score-board">ENERGY: <span id="score">0</span> / 100</div>
+        <div id="status-message">Click the energy orbs to charge your weapon.</div>
+    </div>
+    
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="overlay" class="hidden">
+        <h1 id="overlay-title">BOSS APPROACHING</h1>
+        <p id="overlay-text">Prepare your final strike.</p>
+        <button id="final-strike-btn" class="hidden">EXECUTE FINAL STRIKE</button>
+        <button id="restart-btn" class="hidden">PLAY AGAIN</button>
+    </div>
+
+    <script src="fingerprint.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
