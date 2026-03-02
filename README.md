@@ -72,21 +72,31 @@ npm start
 4. 点击 **Deploy**，几秒钟后你的游戏即可在全球 CDN 上线！
 
 ### 方案 B: 使用 Docker 部署
-本项目包含完整的 `Dockerfile`，适合部署在自己的云服务器、群晖 NAS 或支持 Docker 的 PaaS 平台（如 Render、Fly.io）。
+本项目包含完整的 `Dockerfile`，且默认从环境变量读取所有配置（包括限流与双重验证码密钥）。你可以非常方便地通过挂载 `.env` 文件来启动容器。
 
-**使用 GitHub Actions 自动构建 (CI/CD):**
-1. 只要你将代码推送到 GitHub 的 `main` 分支，配置好的 `.github/workflows/docker-publish.yml` 就会自动将 Docker 镜像构建并推送到 GitHub Container Registry (ghcr.io)。
-
-**手动构建与运行:**
+**方式 1：使用 GitHub Actions 自动构建的镜像 (推荐)**
+只要你将代码推送到 GitHub 的 `main` 分支，GitHub Actions (`.github/workflows/docker-publish.yml`) 就会自动构建并将镜像推送到 GitHub Container Registry (ghcr.io)。
+在你的服务器上，只需拉取镜像并挂载含密钥的 `.env` 运行：
 ```bash
-# 构建镜像
+# 1. 在服务器上创建一个 .env 文件，填入你的 4 个验证码密钥和设置
+# 2. 拉取并运你的镜像 (注意替换 handsomezhuzhu 为你的真实 GitHub 名字，且仓库须设为 Public 或配置登录权限)
+docker run -d -p 3000:3000 \
+  --name recaptcha-app \
+  --env-file .env \
+  ghcr.io/handsomezhuzhu/recaptchaplay:main
+```
+
+**方式 2：纯手动在服务器上构建与运行**
+把源码放入服务器的某个文件夹中，并确保该目录下有配置好的 `.env` 文件。
+```bash
+# 1. 构建镜像
 docker build -t recaptcha-game .
 
-# 运行镜像 (通过 -e 注入环境变量)
+# 2. 运行镜像 (Docker 会自动读取目录下的 .env 并注入到容器内)
 docker run -d -p 3000:3000 \
-  -e RECAPTCHA_SECRET_KEY="你的私钥" \
-  -e MAX_PLAY_ATTEMPTS="3" \
-  --name recaptcha-app recaptcha-game
+  --name recaptcha-app \
+  --env-file .env \
+  recaptcha-game
 ```
 
 ### 方案 C: GitHub Pages 纯静态部署
